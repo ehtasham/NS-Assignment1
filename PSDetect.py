@@ -8,9 +8,9 @@ import datetime
 import socket
 import pcap
 import commands
+import time
 from dpkt.compat import compat_ord
 
-my_ip=commands.getoutput("/sbin/ifconfig").split("\n")[1].split()[1][5:]
 
 def mac_addr(address):
     """Convert a MAC address to a readable/printable string
@@ -48,32 +48,91 @@ def print_packets(pcap):
            pcap: dpkt pcap reader object (dpkt.pcap.Reader)
     """
     # For each packet in the pcap process the contents
+    port_count=0
+    previous_port=0
+    current_port=0
+    check_port=0
+    pcap.setfilter("tcp")
+    time_difference=0
+    # print "t1: ",t1
     for timestamp, buf in pcap:
 
         # Print out the timestamp in UTC
-        print('Timestamp: ', str(datetime.datetime.utcfromtimestamp(timestamp)))
+        # print('Timestamp: ', str(datetime.datetime.utcfromtimestamp(timestamp)))
 
         # Unpack the Ethernet frame (mac src/dst, ethertype)
         eth = dpkt.ethernet.Ethernet(buf)
-        print('Ethernet Frame: ', mac_addr(eth.src), mac_addr(eth.dst), eth.type)
-
         # Make sure the Ethernet data contains an IP packet
         if not isinstance(eth.data, dpkt.ip.IP):
-            print('Non IP Packet type not supported %s\n' % eth.data.__class__.__name__)
+            # print('Non IP Packet type not supported %s\n' % eth.data.__class__.__name__)
             continue
 
         # Now unpack the data within the Ethernet frame (the IP packet)
         # Pulling out src, dst, length, fragment info, TTL, and Protocol
+        my_ip=commands.getoutput("/sbin/ifconfig").split("\n")[1].split()[1][5:]
         ip = eth.data
+        src_ip=inet_to_str(ip.src)
+        dest_ip=inet_to_str(ip.dst)
+        payload=ip.data
+        src_port=payload.sport
+        dest_port=payload.dport
+        current_port=dest_port
+        
+        if(src_ip == my_ip or dest_ip ==my_ip):
+            # print "my packet"
+            # print "my_ip  : ",my_ip
 
-        # Pull out fragment information (flags and offset all packed into off field, so use bitmasks)
-        do_not_fragment = bool(ip.off & dpkt.ip.IP_DF)
-        more_fragments = bool(ip.off & dpkt.ip.IP_MF)
-        fragment_offset = ip.off & dpkt.ip.IP_OFFMASK
+            # print "src    :",src_ip
+            # print "dest_ip: ",dest_ip 
 
+            # continue
+            if(src_ip == my_ip  ):
+                # print "outgoing packet"
+                if (dest_port==1):
+                    t1 = time.time()
+
+                    print "first port"
+                else:
+                    if(current_port != previous_port):
+                        check_port=previous_port+1
+                        if(current_port!=check_port):
+                            print "Not scanning"
+                            port_count=0
+                            previous_port=current_port
+                            t1=time.time()
+                            print "t1: ",t1
+                        else:
+                            t2 = time.time()
+                            time_difference=  t2 - t1
+                            port_count+=1
+                            print "scanning"
+                            print "port count: ",port_count
+                            previous_port=current_port
+                            # print "t2",t2
+                            print "time_difference",time_difference
+                            if(port_count > 15 and int(time_difference) > 5):
+                                print "scanner detetected at %s IP", src_ip
+
+
+
+
+
+
+            # elif(dest_ip == my_ip):
+            #     # print "incoming packet"
+        else:
+            continue
+            # print "not my packet"
+            # print "src    :",src_ip
+            # print "dest_ip: ",dest_ip 
+
+        
+        # print "my_ip  : ",my_ip
+        # print "src    :",src_ip
+        # print "dest_ip: ",dest_ip    
         # Print out the info
-        print('IP: %s -> %s   (len=%d ttl=%d DF=%d MF=%d offset=%d)\n' % \
-              (inet_to_str(ip.src), inet_to_str(ip.dst), ip.len, ip.ttl, do_not_fragment, more_fragments, fragment_offset))
+        # print('IP Src: %s src port: %s \n IP Dst:  %s  dest port: %s  \n' % \
+        #       (src_ip,src_port, dest_ip,dest_port))
 
 
 
