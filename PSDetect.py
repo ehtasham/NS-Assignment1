@@ -6,6 +6,7 @@ import pcap
 import commands
 import time
 from dpkt.compat import compat_ord
+import os
 
 def inet_to_str(inet):
     try:
@@ -61,8 +62,9 @@ def print_packets(pcap):
                             print "port count: ",port_count
                             previous_port=current_port
                             print "time_difference",time_difference
-                            if(port_count > 15 and int(time_difference) >= 5):
+                            if(port_count >= 15 and int(time_difference) >= 5):
                                 print "scanner detetected at %s IP", src_ip
+                                os._exit(0)
             # elif(dest_ip == my_ip):
             #     # print "incoming packet"
         else:
