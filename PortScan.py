@@ -13,16 +13,15 @@ remoteServer=str(sys.argv[1])
 remoteServerIP  = socket.gethostbyname(remoteServer)
 
 t1 = time.time()
-for port in range(0,total_ports):  
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    result = sock.connect_ex((remoteServerIP, port))
-    
-    if result == 0:
-    	service_name=socket.getservbyport(port)
-        # print ('Port %d: Open  Service: %s' (port,service_name))
-        print('Port: %s Open  Service :  %s  ' % \
-              (port,service_name))
-    sock.close()
+for port in range(1,23): 
+	print "scanning port {} ".format(port)
+	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	result = sock.connect_ex((remoteServerIP, port))
+	if result == 0:
+		service_name=socket.getservbyport(port)
+		print('Port: %s Open  Service :  %s  ' % \
+			(port,service_name))
+	sock.close()
 
 t2 = time.time()
 time_difference =  t2 - t1
